@@ -7,6 +7,8 @@ chmod +x fish/custom.fish
 ```
 
 ### 说明
+alias 都保存在 `~/.config/fish/functions` 目录下
+
 * py
 python3
 * gnoe
