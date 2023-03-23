@@ -13,3 +13,5 @@ alias 都保存在 `~/.config/fish/functions` 目录下
 python3
 * gnoe
 合并最近一次提交，更新最新记录
+*dcu
+docker compose更新镜像并重启对应容器

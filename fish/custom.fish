@@ -1,6 +1,7 @@
 #!/usr/bin/env fish
 alias -s py="python3"
 alias -s gnoe="git commit --amend --reset-author --no-edit"
+alias -s dcu="docker compose pull && docker compose up -d --remove-orphans"
 
 # 杀死运行在指定端口的程序
 function kp
