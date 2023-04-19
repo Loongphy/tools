@@ -3,7 +3,7 @@ alias -s py="python3"
 alias -s gnoe="git commit --amend --reset-author --no-edit"
 alias -s dcu="docker compose pull && docker compose up -d --remove-orphans"
 alias -s gf="git push -f"
-alias -s gd="git branch -r | grep -v \"main\" | xargs -n 1 git branch -D"
+alias -s gd="git branch -a | grep -v \"main\" | xargs git branch -D"
 
 # 杀死运行在指定端口的程序
 function kp
