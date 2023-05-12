@@ -1,14 +1,16 @@
-#!/usr/bin/env fish
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+end
+set PATH $HOME/.cargo/bin $PATH
 
-alias -s py="python3"
-alias -s gnoe="git commit --amend --reset-author --no-edit"
-alias -s dcu="docker compose pull && docker compose up -d --remove-orphans"
+alias py="python3"
 
 # git commands
 alias gp='git push'
+alias gd="git branch -a | grep -v \"main\" | xargs git branch -D"
 alias gpf='git push --force'
 alias gpl='git pull --rebase'
-alias gd="git branch -a | grep -v \"main\" | xargs git branch -D"
+alias gnoe="git commit --amend --reset-author --no-edit"
 
 # proxy
 function proxy
