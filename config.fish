@@ -6,6 +6,7 @@ set PATH $HOME/.cargo/bin $PATH
 alias py="python3"
 
 # git commands
+alias main="git checkout main"
 alias gp="git push"
 alias gd="git branch -a | grep -v \"main\" | xargs git branch -D"
 alias gpf="git push --force"
