@@ -3,17 +3,6 @@ if status is-interactive
 end
 set PATH $HOME/.cargo/bin $PATH
 
-alias py="python3"
-
-# git commands
-alias main="git checkout main"
-alias gp="git push"
-alias gd="git branch -a | grep -v \"main\" | xargs git branch -D"
-alias gpf="git push --force"
-alias gpl="git pull --rebase"
-alias gnoe="git commit --amend --reset-author --no-edit"
-alias ip="curl ipinfo.io"
-
 # proxy
 function proxy
     set ip (grep nameserver /etc/resolv.conf | cut -d " " -f 2)
@@ -28,5 +17,18 @@ function kp
     lsof -i:$port | awk "NR==2{print $2}" | xargs kill -9
 end
 
-# frontend
+alias py="python3"
+
+# git commands
+alias main="git checkout main"
+alias gp="git push"
+alias gd="git branch | grep -v main | xargs git branch -D"
+alias gpf="git push --force"
+alias gpl="git pull --rebase"
+alias gnoe="git commit --amend --reset-author --no-edit"
+alias gc="git checkout"
+alias ip="curl ipinfo.io"
+
+# Node.js @antfu/ni
 alias d="nr dev"
+alias lo="nr local"
