@@ -21,6 +21,7 @@ alias py="python3"
 
 # git commands
 alias main="git checkout main"
+alias cl="git clone"
 alias gp="git push"
 alias gd="git branch | grep -v main | xargs git branch -D"
 alias gpf="git push --force"
