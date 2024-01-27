@@ -28,7 +28,7 @@ alias gpf="git push --force"
 alias gpl="git pull --rebase"
 alias gnoe="git commit --amend --reset-author --no-edit"
 alias gc="git checkout"
-alias ip="curl ipinfo.io"
+alias myip="curl ipinfo.io"
 
 # Node.js @antfu/ni
 alias d="nr dev"
