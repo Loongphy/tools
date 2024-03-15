@@ -2,10 +2,7 @@
 
 ## Fish
 
-1. 替换 `~/.config/fish/config.fish`
-
-2. 下次启动 fish shell 生效，想要立刻生效执行
-
 ```shell
-source ~/.config/fish/config.sh
+cp ./config.fish ~/.config/fish/conf.d/config.fish
+source ~/.config/fish/conf.d/config.fish
 ```

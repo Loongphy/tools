@@ -3,7 +3,7 @@ if status is-interactive
 end
 set PATH $HOME/.cargo/bin $PATH
 
-# proxy
+# WSL proxy network=NAT
 function proxy
     set ip (grep nameserver /etc/resolv.conf | cut -d " " -f 2)
     export all_proxy=http://$ip:7890
