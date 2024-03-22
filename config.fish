@@ -3,9 +3,10 @@ if status is-interactive
 end
 set PATH $HOME/.cargo/bin $PATH
 
-# WSL proxy network=NAT
+# WSL proxy
 function proxy
-    set ip (grep nameserver /etc/resolv.conf | cut -d " " -f 2)
+    # set ip (grep nameserver /etc/resolv.conf | cut -d " " -f 2) # if network=NAT in windows .wslconfig(it's the default behaviour)
+    set ip 127.0.0.1 # if network=MIRRORED in windows .wslconfig
     export all_proxy=http://$ip:7890
     git config --global http.proxy http://$ip:7890
     git config --global https.proxy http://$ip:7890
