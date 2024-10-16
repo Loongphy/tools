@@ -10,23 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Set up QEMU for ARM64
-        uses: docker/setup-qemu-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Load Docker Buildx
-        run: |
-          docker run --privileged --rm tonistiigi/binfmt:latest
+        uses: docker/setup-buildx-action@v3
 
       - name: Build PostgreSQL for ARM64
         run: |
           docker buildx build --platform linux/arm64/v8 --output type=local,dest=./output \
           -<<EOF
-          FROM debian:bullseye
+          FROM --platform=linux/arm64/v8 ubuntu:22.04
           RUN apt-get update && \
               apt-get install -y wget make gcc libreadline-dev zlib1g-dev libssl-dev git && \
               apt-get clean
@@ -47,7 +43,7 @@ jobs:
           EOF
 
       - name: Upload binary as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: postgresql-arm64
           path: ./output/usr/local/pgsql/bin
