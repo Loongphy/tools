@@ -1,0 +1,53 @@
+name: Build PostgreSQL ARM64
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU for ARM64
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Load Docker Buildx
+        run: |
+          docker run --privileged --rm tonistiigi/binfmt:latest
+
+      - name: Build PostgreSQL for ARM64
+        run: |
+          docker buildx build --platform linux/arm64/v8 --output type=local,dest=./output \
+          -<<EOF
+          FROM debian:bullseye
+          RUN apt-get update && \
+              apt-get install -y wget make gcc libreadline-dev zlib1g-dev libssl-dev git && \
+              apt-get clean
+
+          RUN wget https://ftp.postgresql.org/pub/source/v12.6/postgresql-12.6.tar.gz && \
+              tar -xzf postgresql-12.6.tar.gz && \
+              cd postgresql-12.6 && \
+              ./configure --prefix=/usr/local/pgsql --enable-static --disable-shared && \
+              make -j$(nproc) && \
+              make install DESTDIR=/output
+
+          RUN cd /output/usr/local/pgsql/bin && \
+              for file in *; do \
+                if [ -f "$file" ] && [ -x "$file" ]; then \
+                  strip "$file"; \
+                fi \
+              done
+          EOF
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: postgresql-arm64
+          path: ./output/usr/local/pgsql/bin
