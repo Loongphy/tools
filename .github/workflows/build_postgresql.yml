@@ -1,4 +1,4 @@
-name: Build Static psql ARM64
+name: Build psql ARM64
 
 on:
   push:
@@ -27,11 +27,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build static psql for ARM64
+      - name: Build psql for ARM64
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.psql
+          file: ./Dockerfile
           platforms: linux/arm64/v8
           push: false
           outputs: type=local,dest=./output
@@ -51,7 +51,7 @@ jobs:
       - name: Upload psql binary as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: psql-arm64-static
+          name: psql-arm64
           path: ./output/usr/local/pgsql/bin/psql
           retention-days: 90
 
@@ -63,6 +63,6 @@ jobs:
       - name: Upload SHA256 checksum
         uses: actions/upload-artifact@v4
         with:
-          name: psql-arm64-static-sha256
+          name: psql-arm64-sha256
           path: ./output/usr/local/pgsql/bin/psql.sha256
           retention-days: 90
