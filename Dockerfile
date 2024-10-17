@@ -1,8 +1,13 @@
-FROM --platform=$TARGETPLATFORM ubuntu:22.04 AS builder
+FROM --platform=$TARGETPLATFORM alpine:3.14 AS builder
 
 # 安装必要的构建工具和依赖
-RUN apt-get update && \
-    apt-get install -y wget make gcc libreadline-dev zlib1g-dev libssl-dev libc6-dev
+RUN apk add --no-cache \
+    build-base \
+    readline-dev \
+    zlib-dev \
+    openssl-dev \
+    linux-headers \
+    wget
 
 WORKDIR /build
 
@@ -22,9 +27,10 @@ RUN ./configure --prefix=/usr/local/pgsql \
                 --without-server \
                 --without-perl \
                 --without-python \
-                LDFLAGS="-static -static-libgcc" \
+                --host=x86_64-alpine-linux-musl \
+                LDFLAGS="-static" \
                 LIBS="-ldl -lm" \
-                CFLAGS="-fPIC" && \
+                CFLAGS="-fPIC -static" && \
     make -C src/bin/psql && \
     make -C src/bin/psql install DESTDIR=/output
 
