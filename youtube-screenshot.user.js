@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube Screenshot
 // @namespace    https://loongphy.com
-// @version      0.1.0
-// @description  Inject a native-style screenshot button into YouTube's player and show captured shots in a floating panel.
+// @version      0.1.1
+// @description  为 YouTube 播放器注入截图按钮，支持截图并显示在浮动面板中。
 // @author       Loongphy
 // @license      CC-BY-NC-ND-4.0
 // @match        https://www.youtube.com/watch*
