@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Screenshot
 // @namespace    https://loongphy.com
-// @version      0.1.1
+// @version      0.1.0
 // @description  为 YouTube 播放器注入截图按钮，支持截图并显示在浮动面板中。
 // @author       Loongphy
 // @license      CC-BY-NC-ND-4.0
@@ -18,14 +18,6 @@
     const GALLERY_ID = 'tm-ytp-screenshot-gallery';
     const RETRY_LIMIT = 10;
     const RETRY_DELAY = 500;
-    const DEBUG = true;
-
-    const debug = (...args) => {
-        if (!DEBUG) return;
-        console.log('[YouTube Screenshot]', ...args);
-    };
-
-    debug('userscript bootstrap start');
 
     GM_addStyle(`
       #${GALLERY_ID} {
@@ -177,7 +169,6 @@
     init();
 
     function init() {
-        debug('init called');
         ensureGallery();
         attachObservers();
         ensureButtonWithRetries();
@@ -185,38 +176,30 @@
 
     function ensureButtonWithRetries(attempt = 0) {
         if (attempt > RETRY_LIMIT) {
-            debug('ensureButton retries exhausted');
             return;
         }
         if (!ensureButton()) {
-            debug('ensureButton missing, retry', attempt + 1);
             setTimeout(() => ensureButtonWithRetries(attempt + 1), RETRY_DELAY);
-        } else if (attempt > 0) {
-            debug('ensureButton succeeded after retry', attempt);
         }
     }
 
     function attachObservers() {
         const reactRoot = document.body;
         if (!reactRoot) {
-            debug('attachObservers: document.body missing');
             return;
         }
 
         const observer = new MutationObserver(throttle(ensureButton, 500));
-        debug('MutationObserver attached to body');
         observer.observe(reactRoot, {
             childList: true,
             subtree: true,
         });
 
         document.addEventListener('yt-navigate-finish', () => {
-            debug('yt-navigate-finish detected');
             ensureButtonWithRetries();
         });
 
         window.addEventListener('yt-page-data-updated', () => {
-            debug('yt-page-data-updated detected');
             ensureButtonWithRetries();
         });
     }
@@ -224,18 +207,15 @@
     function ensureButton() {
         const controls = document.querySelector('.ytp-right-controls');
         if (!controls) {
-            debug('ytp-right-controls not found');
             return false;
         }
 
         if (document.getElementById(BUTTON_ID)) {
-            debug('screenshot button already present');
             return true;
         }
 
         const button = createButton();
         controls.insertBefore(button, controls.firstChild);
-        debug('screenshot button inserted');
         return true;
     }
 
@@ -252,7 +232,6 @@
 
         button.addEventListener('click', (event) => {
             event.preventDefault();
-            debug('screenshot button clicked');
             captureScreenshot();
         });
         return button;
@@ -378,24 +357,17 @@
         document.body.removeChild(link);
         item.classList.add('tm-ytp-screenshot-saved');
         setTimeout(() => item.classList.remove('tm-ytp-screenshot-saved'), 600);
-        debug('screenshot saved');
     }
 
     function captureScreenshot() {
         const video = document.querySelector('video.html5-main-video');
         if (!video) {
             console.warn('[YouTube Screenshot] Video element not found.');
-            debug('video element missing');
             return;
         }
 
         if (video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
             console.warn('[YouTube Screenshot] Video is not ready for capturing.');
-            debug('video not ready', {
-                readyState: video.readyState,
-                width: video.videoWidth,
-                height: video.videoHeight,
-            });
             return;
         }
 
@@ -405,7 +377,6 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) {
             console.warn('[YouTube Screenshot] Unable to obtain 2D context.');
-            debug('canvas 2d context missing');
             return;
         }
 
@@ -413,11 +384,9 @@
 
         try {
             const dataUrl = canvas.toDataURL('image/png');
-            debug('screenshot captured');
             addScreenshotToGallery(dataUrl, video.currentTime);
         } catch (error) {
             console.error('[YouTube Screenshot] Failed to capture screenshot:', error);
-            debug('canvas toDataURL failed', error);
         }
     }
 
@@ -476,10 +445,8 @@
                 await copyImageToClipboard(dataUrl);
                 item.classList.add('tm-ytp-screenshot-copied');
                 setTimeout(() => item.classList.remove('tm-ytp-screenshot-copied'), 600);
-                debug('screenshot copied to clipboard');
             } catch (error) {
                 console.warn('[YouTube Screenshot] Failed to copy screenshot to clipboard.', error);
-                debug('copy to clipboard failed', error);
             }
         });
 
@@ -505,7 +472,6 @@
         item.appendChild(toolbar);
 
         gallery.appendChild(item);
-        debug('screenshot added to gallery');
     }
 
     function ensureGallery() {
@@ -517,7 +483,6 @@
         gallery = document.createElement('div');
         gallery.id = GALLERY_ID;
         document.body.appendChild(gallery);
-        debug('gallery created');
         return gallery;
     }
 
