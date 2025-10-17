@@ -2,8 +2,9 @@
 // @name         中英文空格排版
 // @namespace    https://loongphy.com
 // @author       Loongphy
-// @version      0.2.0
+// @version      0.2.1
 // @description  中英/数字混排的视觉留白（不改文本）；跳过输入框、代码块和可编辑区域。
+// @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @match        *://*/*
 // @run-at       document-start
 // @grant        none
