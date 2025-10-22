@@ -26,8 +26,7 @@ html { text-autospace: normal; }
 @supports (text-autospace: ideograph-alpha ideograph-numeric punctuation replace) {
   html { text-autospace: ideograph-alpha ideograph-numeric punctuation replace; }
 }
-code, pre, kbd, samp, textarea, input,
-[contenteditable], [contenteditable=""], [contenteditable="true"] {
+code, pre, kbd, samp {
   text-autospace: no-autospace;
 }
 `;
