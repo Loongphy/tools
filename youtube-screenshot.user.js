@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         YouTube Screenshot
 // @namespace    https://loongphy.com
-// @version      0.1.0
+// @version      0.1.1
 // @description  为 YouTube 播放器注入截图按钮，支持截图并显示在浮动面板中。
 // @author       Loongphy
-// @license      CC-BY-NC-ND-4.0
-// @match        https://www.youtube.com/watch*
+// @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
+// @match        https://*.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @run-at       document-idle
 // @grant        GM_addStyle
