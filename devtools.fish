@@ -36,7 +36,7 @@ alias myip="curl ipinfo.io"
 # require @antfu/ni npm
 alias d="nr dev"
 
-alias e="cursor"
+alias e="edit.exe"
 
 function node-lts --description "Install and configure the latest Node.js LTS version"
     # Set color variables for output
@@ -114,29 +114,19 @@ function node-lts --description "Install and configure the latest Node.js LTS ve
     echo "Node.js version: "(node --version)
     echo "npm version: "(npm --version)
 
-    # Configure npm global settings
-    echo "Configuring npm global settings..."
-    
-    # Optional: Set npm registry
-    npm config set registry https://registry.npmmirror.com
-    
-    # Create global node_modules directory
-    set -l npm_global_dir "$HOME/.npm-global"
-    if not test -d $npm_global_dir
-        mkdir -p $npm_global_dir
-        npm config set prefix $npm_global_dir
-        
-        # Add to PATH if not already added
-        if not contains $npm_global_dir/bin $fish_user_paths
-            set -U fish_user_paths $npm_global_dir/bin $fish_user_paths
-        end
-    end
-
     # Install @antfu/ni (Unified package manager runner)
     echo "Installing @antfu/ni..."
-    if not npm install -g @antfu/ni
+    if not npm install -g @antfu/ni@latest
         echo $red"Error: Failed to install @antfu/ni"$normal
         return 1
     end
     echo $green"✓ Successfully installed @antfu/ni"$normal
+
+    # Install @openai/codex
+    echo "Installing @openai/codex..."
+    if not npm install -g @openai/codex@latest
+        echo $red"Error: Failed to install @openai/codex"$normal
+        return 1
+    end
+    echo $green"✓ Successfully installed @openai/codex"$normal
 end
