@@ -34,5 +34,6 @@
 |------|------|------|
 | **YouTube 视频截图** | 视频截图当前时间戳，保存、复制截图 | [youtube-screenshot.user.js](./youtube-screenshot.user.js) |
 | **ARM64 PostgreSQL 构建** | 构建 ARM64 PostgreSQL 12.6 的 Docker 配置和 CI 流程 | [Dockerfile](./Dockerfile)<br>[build_postgresql.yml](./.github/workflows/build_postgresql.yml) |
+| **ARM64 Nginx 静态构建** | 构建 musl 静态链接的 Nginx aarch64 免安装包的 CI | [Dockerfile.nginx](./Dockerfile.nginx)<br>[build_nginx.yml](./.github/workflows/build_nginx.yml) |
 | **中英文空格排版** | 中英/数字混排的视觉留白（不改文本）；跳过输入框、代码块和可编辑区域。 | [cjk-latin-autospace.user.js](./cjk-latin-autospace.user.js) |
 
