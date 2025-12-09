@@ -31,6 +31,13 @@ jobs:
             build-essential musl-dev musl-tools \
             pkg-config perl wget ca-certificates tar xz-utils
 
+      - name: Provide crypt.h for musl toolchain
+        run: |
+          set -eux
+          SYSROOT=$(musl-gcc -print-sysroot)
+          install -d "$SYSROOT/include"
+          cp /usr/include/crypt.h "$SYSROOT/include/crypt.h"
+
       - name: Download sources
         run: |
           set -eux
