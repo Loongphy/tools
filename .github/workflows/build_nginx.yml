@@ -1,112 +1,98 @@
-name: Build Static Nginx (ARM64)
+name: Build nginx (aarch64 musl static)
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NGINX_VERSION: "1.26.2"
+  OPENSSL_VERSION: "3.2.1"
+  PCRE_VERSION: "8.45"
+  ZLIB_VERSION: "1.3.1"
 
 jobs:
-  build:
-    name: Build Static Nginx
+  build-static:
     runs-on: ubuntu-24.04-arm
-    
-    container:
-      image: alpine:latest
-      # 建议：确保容器以 root 运行（虽然 Alpine 默认就是，但显式声明更安全）
-      options: --user root
-
     env:
-      # 更新到最新稳定版 (截至 2025-02-06，Nginx 1.26.3 是最新稳定版)
-      NGINX_VERSION: 1.26.3
-      # OpenSSL 3.3.x 没问题，但要注意 3.x 编译速度比 1.1.1 慢很多
-      OPENSSL_VERSION: 3.3.0
-      PCRE2_VERSION: 10.43
-      ZLIB_VERSION: 1.3.1
+      ARTIFACT_PATH: /tmp/nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static.tar.gz
+      CHECKSUM_PATH: /tmp/nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static.tar.gz.sha256
+      ARTIFACT_NAME: nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static
+      CHECKSUM_NAME: nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static-sha256
 
     steps:
-      - name: Install Build Dependencies
-        # 增加 tar 和 strip (binutils)
+      - name: Install build dependencies
         run: |
-          apk update
-          apk add build-base curl linux-headers perl bash tar binutils
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential musl-dev musl-tools \
+            pkg-config perl wget ca-certificates tar xz-utils
 
-      - name: Download Sources
+      - name: Download sources
         run: |
-          mkdir -p /build
-          cd /build
+          set -eux
+          wget -q https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
+          wget -q https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+          wget -q https://downloads.sourceforge.net/project/pcre/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.tar.gz
+          wget -q https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 
-          # 定义通用 Curl 参数，模拟浏览器 User-Agent 避免 403，并跟随重定向
-          CURL_OPTS="-L -H 'User-Agent: Mozilla/5.0' --fail --silent --show-error"
+          tar -xzf nginx-${NGINX_VERSION}.tar.gz
+          tar -xzf openssl-${OPENSSL_VERSION}.tar.gz
+          tar -xzf pcre-${PCRE_VERSION}.tar.gz
+          tar -xzf zlib-${ZLIB_VERSION}.tar.gz
 
-          echo "Downloading Nginx..."
-          curl $CURL_OPTS -O http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
-          tar zxf nginx-${NGINX_VERSION}.tar.gz
-
-          echo "Downloading OpenSSL..."
-          curl $CURL_OPTS -O https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz
-          tar zxf openssl-${OPENSSL_VERSION}.tar.gz
-
-          echo "Downloading PCRE2..."
-          curl $CURL_OPTS -O https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz
-          tar zxf pcre2-${PCRE2_VERSION}.tar.gz
-
-          echo "Downloading Zlib..."
-          curl $CURL_OPTS -O https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz
-          tar zxf zlib-${ZLIB_VERSION}.tar.gz
-
-      - name: Compile Static Nginx
+      - name: Build nginx (static musl)
+        working-directory: nginx-${{ env.NGINX_VERSION }}
         run: |
-          cd /build/nginx-${NGINX_VERSION}
+          set -eux
 
-          # 检查目录是否存在，防止 tar 解压路径不一致导致的错误
-          ls -F ../
-
-          ./configure \
-            --prefix=/etc/nginx \
-            --sbin-path=/usr/sbin/nginx \
-            --conf-path=/etc/nginx/nginx.conf \
-            --pid-path=/var/run/nginx.pid \
-            --lock-path=/var/run/nginx.lock \
-            --error-log-path=/var/log/nginx/error.log \
-            --http-log-path=/var/log/nginx/access.log \
-            --with-pcre=../pcre2-${PCRE2_VERSION} \
-            --with-zlib=../zlib-${ZLIB_VERSION} \
-            --with-openssl=../openssl-${OPENSSL_VERSION} \
+          CC=musl-gcc ./configure \
+            --prefix=/opt/nginx \
+            --sbin-path=/opt/nginx/sbin/nginx \
+            --conf-path=/opt/nginx/conf/nginx.conf \
+            --error-log-path=/opt/nginx/logs/error.log \
+            --http-log-path=/opt/nginx/logs/access.log \
+            --pid-path=/opt/nginx/run/nginx.pid \
+            --lock-path=/opt/nginx/run/nginx.lock \
+            --with-cc-opt="-static -O2" \
+            --with-ld-opt="-static -static-libgcc" \
             --with-http_ssl_module \
             --with-http_v2_module \
             --with-http_gzip_static_module \
+            --with-http_realip_module \
             --with-http_stub_status_module \
             --with-stream \
             --with-stream_ssl_module \
-            --with-file-aio \
-            --with-threads \
-            --with-cc-opt="-static -static-libgcc -O2" \
-            --with-ld-opt="-static"
+            --with-pcre=../pcre-${PCRE_VERSION} \
+            --with-pcre-jit \
+            --with-zlib=../zlib-${ZLIB_VERSION} \
+            --with-openssl=../openssl-${OPENSSL_VERSION} \
+            --with-openssl-opt="no-shared no-dso no-tests"
 
-          # 使用 4 线程编译，避免在某些共享 Runner 上 OOM
-          make -j4
-          
-          # 关键优化：Strip 去除符号表，减小体积
-          strip -s objs/nginx
-          
-          cp objs/nginx /tmp/nginx-aarch64-static
+          make -j"$(nproc)"
 
-      - name: Verify Binary
+          file objs/nginx
+          ldd objs/nginx || true
+          file objs/nginx | grep -q "statically linked"
+
+      - name: Package artifacts
         run: |
-          cd /tmp
-          
-          echo "=== File Type ==="
-          file nginx-aarch64-static
-          
-          echo "=== Dependencies (Must return empty or 'not a dynamic executable') ==="
-          ldd nginx-aarch64-static 2>&1 || true
-          
-          echo "=== Version Info ==="
-          ./nginx-aarch64-static -V
+          set -eux
+          mkdir -p /tmp/pkg/nginx/sbin
+          cp nginx-${NGINX_VERSION}/objs/nginx /tmp/pkg/nginx/sbin/nginx
+          tar -C /tmp/pkg -czf "${ARTIFACT_PATH}" nginx
+          sha256sum "${ARTIFACT_PATH}" > "${CHECKSUM_PATH}"
 
-      - name: Upload Artifact
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: nginx-aarch64-static
-          path: /tmp/nginx-aarch64-static
-          retention-days: 5
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_PATH }}
+          retention-days: 30
+
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CHECKSUM_NAME }}
+          path: ${{ env.CHECKSUM_PATH }}
+          retention-days: 30
