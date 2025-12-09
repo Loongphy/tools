@@ -28,7 +28,7 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential musl musl-dev musl-tools \
+            build-essential musl musl-dev musl-tools libxcrypt-dev \
             pkg-config perl wget ca-certificates tar xz-utils
 
       - name: Download sources
