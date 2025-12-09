@@ -34,9 +34,9 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           build-args: |
-            NGINX_VERSION=1.24.0
-            OPENSSL_VERSION=1.1.1w
-            PCRE_VERSION=8.45
+            NGINX_VERSION=1.26.2
+            OPENSSL_VERSION=3.0.14
+            PCRE2_VERSION=10.43
             ZLIB_VERSION=1.3.1
 
       - name: Move cache
