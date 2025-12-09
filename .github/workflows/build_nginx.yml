@@ -57,8 +57,7 @@ jobs:
             --http-log-path=/opt/nginx/logs/access.log \
             --pid-path=/opt/nginx/run/nginx.pid \
             --lock-path=/opt/nginx/run/nginx.lock \
-            --with-cc-opt="-O2 -pipe -I/usr/include" \
-            --with-ld-opt="-static" \
+            --with-cc-opt="-static -O2 -pipe -I/usr/include" \
             --without-http_auth_basic_module \
             --with-http_ssl_module \
             --with-http_v2_module \
