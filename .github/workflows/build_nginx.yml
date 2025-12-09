@@ -13,13 +13,16 @@ env:
 jobs:
   build-static:
     runs-on: ubuntu-24.04-arm
-    env:
-      ARTIFACT_PATH: /tmp/nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static.tar.gz
-      CHECKSUM_PATH: /tmp/nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static.tar.gz.sha256
-      ARTIFACT_NAME: nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static
-      CHECKSUM_NAME: nginx-${{ env.NGINX_VERSION }}-aarch64-musl-static-sha256
 
     steps:
+      - name: Derive artifact names
+        run: |
+          set -eux
+          echo "ARTIFACT_PATH=/tmp/nginx-${NGINX_VERSION}-aarch64-musl-static.tar.gz" >> "$GITHUB_ENV"
+          echo "CHECKSUM_PATH=/tmp/nginx-${NGINX_VERSION}-aarch64-musl-static.tar.gz.sha256" >> "$GITHUB_ENV"
+          echo "ARTIFACT_NAME=nginx-${NGINX_VERSION}-aarch64-musl-static" >> "$GITHUB_ENV"
+          echo "CHECKSUM_NAME=nginx-${NGINX_VERSION}-aarch64-musl-static-sha256" >> "$GITHUB_ENV"
+
       - name: Install build dependencies
         run: |
           set -eux
