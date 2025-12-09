@@ -31,13 +31,6 @@ jobs:
             build-essential musl-dev musl-tools \
             pkg-config perl wget ca-certificates tar xz-utils
 
-      - name: Provide crypt.h for musl toolchain
-        run: |
-          set -eux
-          SYSROOT=$(musl-gcc -print-sysroot)
-          install -d "$SYSROOT/include"
-          cp /usr/include/crypt.h "$SYSROOT/include/crypt.h"
-
       - name: Download sources
         run: |
           set -eux
@@ -64,7 +57,7 @@ jobs:
             --http-log-path=/opt/nginx/logs/access.log \
             --pid-path=/opt/nginx/run/nginx.pid \
             --lock-path=/opt/nginx/run/nginx.lock \
-            --with-cc-opt="-static -O2" \
+            --with-cc-opt="-static -O2 -I/usr/include" \
             --with-ld-opt="-static -static-libgcc" \
             --without-http_auth_basic_module \
             --with-http_ssl_module \
