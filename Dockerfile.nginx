@@ -46,7 +46,7 @@ RUN ./configure \
     --with-pcre=/src/pcre2-${PCRE2_VERSION} \
     --with-pcre2 \
     --with-pcre-jit \
-    --with-pcre-opt="--enable-jit --enable-unicode-properties" \
+    --with-pcre-opt="--enable-jit --enable-unicode" \
     --with-zlib=/src/zlib-${ZLIB_VERSION} \
     --with-zlib-opt="--static" \
     --with-openssl=/src/openssl-${OPENSSL_VERSION} \
