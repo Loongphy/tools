@@ -22,23 +22,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-24.04-arm
+
     steps:
-      - name: Install cross-compilation toolchain
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget tar make
-
-          # 下载 musl cross compiler for aarch64
-          wget -q https://musl.cc/aarch64-linux-musl-cross.tgz
-          tar -xzf aarch64-linux-musl-cross.tgz
-          echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+          sudo apt-get install -y \
+            build-essential musl-tools musl-dev \
+            pkg-config perl wget ca-certificates tar xz-utils
 
       - name: Download sources
         run: |
+          set -e
           wget -q https://nginx.org/download/nginx-${{ inputs.nginx_version }}.tar.gz
-          wget -q https://github.com/openssl/openssl/releases/download/openssl-${{ inputs.openssl_version }}/openssl-${{ inputs.openssl_version }}.tar.gz
+          wget -q https://www.openssl.org/source/openssl-${{ inputs.openssl_version }}.tar.gz
           wget -q https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ inputs.pcre2_version }}/pcre2-${{ inputs.pcre2_version }}.tar.gz
           wget -q https://zlib.net/zlib-${{ inputs.zlib_version }}.tar.gz
 
@@ -47,27 +45,21 @@ jobs:
           tar -xzf pcre2-${{ inputs.pcre2_version }}.tar.gz
           tar -xzf zlib-${{ inputs.zlib_version }}.tar.gz
 
-      - name: Build nginx
-        env:
-          CC: aarch64-linux-musl-gcc
-          CXX: aarch64-linux-musl-g++
-          AR: aarch64-linux-musl-ar
-          RANLIB: aarch64-linux-musl-ranlib
-          CFLAGS: "-static -O2"
-          LDFLAGS: "-static"
+      - name: Build nginx (static musl)
         run: |
+          set -e
           cd nginx-${{ inputs.nginx_version }}
 
-          ./configure \
+          CC=musl-gcc ./configure \
             --prefix=/opt/nginx \
-            --with-cc=aarch64-linux-musl-gcc \
+            --sbin-path=/opt/nginx/sbin/nginx \
+            --conf-path=/opt/nginx/conf/nginx.conf \
+            --error-log-path=/opt/nginx/logs/error.log \
+            --http-log-path=/opt/nginx/logs/access.log \
+            --pid-path=/opt/nginx/run/nginx.pid \
+            --lock-path=/opt/nginx/run/nginx.lock \
             --with-cc-opt="-static -O2" \
-            --with-ld-opt="-static" \
-            --with-cpu-opt=aarch64 \
-            --crossbuild=Linux:aarch64 \
-            --with-pcre=../pcre2-${{ inputs.pcre2_version }} \
-            --with-zlib=../zlib-${{ inputs.zlib_version }} \
-            --with-openssl=../openssl-${{ inputs.openssl_version }} \
+            --with-ld-opt="-static -static-libgcc" \
             --with-http_ssl_module \
             --with-http_v2_module \
             --with-http_gzip_static_module \
@@ -75,22 +67,37 @@ jobs:
             --with-http_stub_status_module \
             --with-stream \
             --with-stream_ssl_module \
-            --without-http_fastcgi_module \
-            --without-http_uwsgi_module \
-            --without-http_scgi_module \
-            --without-http_grpc_module
+            --with-pcre=../pcre2-${{ inputs.pcre2_version }} \
+            --with-pcre2 \
+            --with-pcre-jit \
+            --with-pcre-opt="--enable-jit" \
+            --with-zlib=../zlib-${{ inputs.zlib_version }} \
+            --with-zlib-opt="--static" \
+            --with-openssl=../openssl-${{ inputs.openssl_version }} \
+            --with-openssl-opt="no-shared no-dso no-tests -fPIC"
 
-          make -j$(nproc)
+          make -j"$(nproc)"
 
-      - name: Verify binary
-        run: |
-          file nginx-${{ inputs.nginx_version }}/objs/nginx
-          aarch64-linux-musl-strip nginx-${{ inputs.nginx_version }}/objs/nginx
-          ls -lh nginx-${{ inputs.nginx_version }}/objs/nginx
+          file objs/nginx
+          strip objs/nginx
+          ls -lh objs/nginx
+          ldd objs/nginx || echo "Static binary confirmed"
 
-      - name: Upload artifact
+          mkdir -p /tmp/pkg/nginx/sbin
+          cp objs/nginx /tmp/pkg/nginx/sbin/nginx
+          tar -C /tmp/pkg -czf /tmp/nginx-${{ inputs.nginx_version }}-aarch64-musl-static.tar.gz nginx
+          sha256sum /tmp/nginx-${{ inputs.nginx_version }}-aarch64-musl-static.tar.gz > /tmp/nginx-${{ inputs.nginx_version }}-aarch64-musl-static.tar.gz.sha256
+
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: nginx-${{ inputs.nginx_version }}-aarch64-musl-static
-          path: nginx-${{ inputs.nginx_version }}/objs/nginx
+          path: /tmp/nginx-${{ inputs.nginx_version }}-aarch64-musl-static.tar.gz
+          retention-days: 30
+
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: nginx-${{ inputs.nginx_version }}-aarch64-musl-static-sha256
+          path: /tmp/nginx-${{ inputs.nginx_version }}-aarch64-musl-static.tar.gz.sha256
           retention-days: 30
