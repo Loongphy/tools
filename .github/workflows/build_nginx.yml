@@ -59,6 +59,7 @@ jobs:
             --lock-path=/opt/nginx/run/nginx.lock \
             --with-cc-opt="-static -O2" \
             --with-ld-opt="-static -static-libgcc" \
+            --without-http_auth_basic_module \
             --with-http_ssl_module \
             --with-http_v2_module \
             --with-http_gzip_static_module \
