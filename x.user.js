@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.0.2
+// @version      1.0.3
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -105,7 +105,8 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
   function applyDemoMode() {
     ensureDemoStyle();
     const root = document.documentElement;
-    root.style.setProperty('--x-cleaner-demo-blur', `${CONFIG.demoBlurPx}px`);
+    const blurValue = CONFIG.demoMode ? `${CONFIG.demoBlurPx}px` : '0px';
+    root.style.setProperty('--x-cleaner-demo-blur', blurValue);
   }
 
   const rxLists = /^\/[A-Za-z0-9_]{1,20}\/lists\/?$/;
