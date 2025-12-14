@@ -4,6 +4,7 @@
 // @namespace    https://loongphy.com
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
 // @version      1.0.0
 // @match        https://x.com/*
 // @run-at       document-start
