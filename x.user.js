@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.0.1
+// @version      1.0.2
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -79,18 +79,23 @@
     const s = document.createElement('style');
     s.id = DEMO_STYLE_ID;
     s.textContent = `
-/* 头像模糊 */
-html[data-x-cleaner-demo="1"] header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] [data-testid^="UserAvatar-Container-"] {
+/* 侧边栏头像模糊 */
+header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] [data-testid^="UserAvatar-Container-"] {
   filter: blur(var(--x-cleaner-demo-blur, 12px)) !important;
 }
 
-/* 用户名（显示名）模糊 */
-html[data-x-cleaner-demo="1"] header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] > div:nth-child(2) div[dir="ltr"] > span {
+/* 侧边栏用户名（显示名）模糊 */
+header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] > div:nth-child(2) div[dir="ltr"] > span {
   filter: blur(var(--x-cleaner-demo-blur, 12px)) !important;
 }
 
-/* @用户名模糊 */
-html[data-x-cleaner-demo="1"] header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] > div:nth-child(2) div[dir="ltr"] > span[class*="r-poiln3"] {
+/* 侧边栏 @用户名模糊 */
+header[role="banner"] button[data-testid="SideNav_AccountSwitcher_Button"] > div:nth-child(2) div[dir="ltr"] > span[class*="r-poiln3"] {
+  filter: blur(var(--x-cleaner-demo-blur, 12px)) !important;
+}
+
+/* 发推输入框旁的头像模糊 */
+div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(article)) [data-testid^="UserAvatar-Container-"] {
   filter: blur(var(--x-cleaner-demo-blur, 12px)) !important;
 }
 `;
@@ -101,11 +106,6 @@ html[data-x-cleaner-demo="1"] header[role="banner"] button[data-testid="SideNav_
     ensureDemoStyle();
     const root = document.documentElement;
     root.style.setProperty('--x-cleaner-demo-blur', `${CONFIG.demoBlurPx}px`);
-    if (CONFIG.demoMode) {
-      root.setAttribute('data-x-cleaner-demo', '1');
-    } else {
-      root.removeAttribute('data-x-cleaner-demo');
-    }
   }
 
   const rxLists = /^\/[A-Za-z0-9_]{1,20}\/lists\/?$/;
