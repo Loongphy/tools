@@ -33,7 +33,29 @@
 | 工具 | 描述 | 文件 |
 |------|------|------|
 | **YouTube 视频截图** | 视频截图当前时间戳，保存、复制截图 | [youtube-screenshot.user.js](./youtube-screenshot.user.js) |
-| **ARM64 PostgreSQL 构建** | 构建 ARM64 PostgreSQL 12.6 的 Docker 配置和 CI 流程 | [Dockerfile](./Dockerfile)<br>[build_postgresql.yml](./.github/workflows/build_postgresql.yml) |
-| **ARM64 Nginx 静态构建** | 构建 musl 静态链接的 Nginx aarch64 免安装包（Nginx 1.26.2 + OpenSSL 3.0.14 + PCRE2 10.43） 的 CI | [Dockerfile.nginx](./Dockerfile.nginx)<br>[build_nginx.yml](./.github/workflows/build_nginx.yml) |
 | **中英文空格排版** | 中英/数字混排的视觉留白（不改文本）；跳过输入框、代码块和可编辑区域。 | [cjk-latin-autospace.user.js](./cjk-latin-autospace.user.js) |
+| **x.user.js** | 树状结构标记 X 左侧栏相关页面元素 | [x.user.js](./x.user.js) |
 
+### x.user.js
+
+```text
+header[role="banner"]  (width=88 via CSS)
+└─ div (header 内第一个/唯一 div, width=88 via CSS)
+   └─ div (top-parent, width=88 via JS；flex column; justify-content: space-between)
+      ├─ div (top)
+      │  ├─ div (logo)
+      │  ├─ div (left-top)
+      │  │  └─ nav[role="navigation"]
+      │  │     ├─ a[href="/home"] ...
+      │  │     ├─ a[href="/notifications"] ...
+      │  │     └─ ...
+      │  └─ div (left-middle)
+      │     └─ a[href="/compose/post"]  (发帖按钮)
+      └─ div (account)
+         └─ div (account-inner / wrapper)
+            └─ button[data-testid="SideNav_AccountSwitcher_Button"] avatar
+               ├─ div (userAvatar-parent)
+               │  └─ div[data-testid="UserAvatar-Container-<username>"] userAvatar
+               ├─ div (extra-1, 宽度变小时会隐藏)
+               └─ div (extra-2, 宽度变小时会隐藏)
+```
