@@ -38,6 +38,11 @@
 
 ### x.user.js
 
+- 隐藏不必要的营销按钮
+- 右侧边栏快捷搜索
+- 马赛克 DEMO 模式
+
+
 ```text
 header[role="banner"]  (width=88 via CSS)
 └─ div (header 内第一个/唯一 div, width=88 via CSS)
