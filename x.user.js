@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.0.4
+// @version      1.1.0
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -208,9 +208,8 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
     const baseMenuStyle = [
       'margin: 53px 0 12px',
       'padding: 12px',
-      'border: 1px solid rgba(255,255,255,0.15)',
+      'border: 1px solid rgb(43, 46, 49)',
       'border-radius: 16px',
-      'background: rgba(0,0,0,0.02)',
     ].join(';');
 
     const ensureRetrievalMenuStyle = () => {
@@ -219,8 +218,16 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
       const st = document.createElement('style');
       st.id = STYLE_ID;
       st.textContent = [
-        '.x-cleaner-retrieval-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:inherit;text-decoration:none;cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background-color 120ms ease,border-color 120ms ease,transform 80ms ease;}',
-        '.x-cleaner-retrieval-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.35);}',
+        '#x-cleaner-retrieval-menu{border-color:rgb(43, 46, 49) !important;}',
+        '@media (prefers-color-scheme: light){#x-cleaner-retrieval-menu{border-color:rgb(228, 234, 236) !important;}}',
+        '@media (prefers-color-scheme: dark){#x-cleaner-retrieval-menu{border-color:rgb(43, 46, 49) !important;}}',
+        'html[data-theme="light"] #x-cleaner-retrieval-menu{border-color:rgb(228, 234, 236) !important;}',
+        'html[data-theme="dark"] #x-cleaner-retrieval-menu, html[data-theme="dim"] #x-cleaner-retrieval-menu{border-color:rgb(43, 46, 49) !important;}',
+        '.x-cleaner-retrieval-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:10px;border:1px solid rgb(43, 46, 49);background:transparent;color:inherit;text-decoration:none;cursor:pointer;font:inherit;line-height:1;user-select:none;transition:transform 80ms ease;}',
+        '@media (prefers-color-scheme: light){.x-cleaner-retrieval-btn{border-color:rgb(228, 234, 236);}}',
+        '@media (prefers-color-scheme: dark){.x-cleaner-retrieval-btn{border-color:rgb(43, 46, 49);}}',
+        'html[data-theme="light"] .x-cleaner-retrieval-btn{border-color:rgb(228, 234, 236);}',
+        'html[data-theme="dark"] .x-cleaner-retrieval-btn, html[data-theme="dim"] .x-cleaner-retrieval-btn{border-color:rgb(43, 46, 49);}',
         '.x-cleaner-retrieval-btn:active{transform:scale(0.98);}',
         '.x-cleaner-retrieval-btn:focus-visible{outline:2px solid rgba(29,155,240,0.9);outline-offset:2px;}',
       ].join('\n');
@@ -461,7 +468,9 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
       hideAncestor(h1);
     }
     hideAncestor(sidebar.querySelector('[data-testid="super-upsell-UpsellCardRenderProperties"]'));
-    hideAncestor(sidebar.querySelector('aside[role="complementary"]'), 1);
+    for (const aside of sidebar.querySelectorAll('aside[role="complementary"]')) {
+      hideAncestor(aside, 2);
+    }
   }
 
   function cleanup() {
