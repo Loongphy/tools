@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.1.0
+// @version      1.1.1
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -441,7 +441,7 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
     for (const a of links) {
       const href = a.getAttribute('href');
       if (!href) continue;
-      if (href === '/explore' || href === '/i/premium_sign_up' || href === '/i/premium-business' || rxLists.test(href) || rxCommunities.test(href)) {
+      if (href === '/explore' || href === '/i/premium_sign_up' || href === '/i/jf/creators/studio'  || rxLists.test(href) || rxCommunities.test(href)) {
         hide(a);
       }
     }
