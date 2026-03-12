@@ -1,0 +1,2 @@
+- You're running in WSL2, when a task requires Windows-side capabilities, invoke Windows PowerShell via `pwsh.exe`.
+- Prefer Conventional Commits

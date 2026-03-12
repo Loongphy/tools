@@ -2,11 +2,25 @@
 
 这是一个用于存放日常开发脚本的工具集仓库。
 
+## Codex 全局 AGENTS.md `~/.codex/AGENTS.md`
+
+**文件**: [Codex-AGENTS.md](./Codex-AGENTS.md)
+
+**背景与用途**：
+这份配置文件是专门针对 **WSL2 + Windows 混合开发场景** 而优化的 Agent 提示词引导。
+
+在我的日常开发工作流中，即使是针对 Windows APP 的开发，我也会倾向于在 WSL2 环境下完成。具体的做法是：将项目文件存放在 Windows 原生文件系统中，然后通过 WSL2 的 `/mnt/` 挂载路径去访问、编辑。
+
+由于这种“在 Linux 环境开发 Windows 宿主机文件”的开发模式相对特殊，常规的 AI Agent 可能会在文件路径识别或系统环境假设上产生混淆。因此，这份引导文件的核心作用是：
+1. **统一开发约定**：让 Agent 明确当前正处于 WSL2 环境中，理解 `/mnt/` 下的 Windows 文件隔离与映射关系。
+2. **提供跨系统调用指南**：当遇到需要对 Windows 进行直接调用的任务时，引导 Agent 采用正确的桥接方式（如通过 `pwsh.exe` 调用 Windows PowerShell）执行。
+
 ## Fish Shell 开发工具
 
 **文件**: [devtools.fish](./devtools.fish)
 
 ### Git 别名
+
 - `main` - 切换到 main 分支
 - `cl` - git clone 的简写
 - `gp` - git push 的简写
@@ -17,11 +31,13 @@
 - `gda` - 获取最新分支并删除所有非 main 分支
 
 ### Node.js 工具
+
 - `node-lts` - 安装并配置最新的 Node.js LTS 版本（使用 fnm），同时自动安装：
   - `@antfu/ni` - 统一的包管理器运行器
   - `@openai/codex` - OpenAI Codex CLI 工具
 
 ### 其他工具
+
 - `kp <port>` - 杀死指定端口的进程
 - `py` - python3 的别名
 - `myip` - 检查代理是否工作（显示 IP 信息）
@@ -41,7 +57,6 @@
 - 隐藏不必要的营销按钮
 - 右侧边栏快捷搜索
 - 马赛克 DEMO 模式
-
 
 ```text
 header[role="banner"]  (width=88 via CSS)
