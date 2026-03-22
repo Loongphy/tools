@@ -12,8 +12,16 @@
 在我的日常开发工作流中，即使是针对 Windows APP 的开发，我也会倾向于在 WSL2 环境下完成。具体的做法是：将项目文件存放在 Windows 原生文件系统中，然后通过 WSL2 的 `/mnt/` 挂载路径去访问、编辑。
 
 由于这种“在 Linux 环境开发 Windows 宿主机文件”的开发模式相对特殊，常规的 AI Agent 可能会在文件路径识别或系统环境假设上产生混淆。因此，这份引导文件的核心作用是：
+
 1. **统一开发约定**：让 Agent 明确当前正处于 WSL2 环境中，理解 `/mnt/` 下的 Windows 文件隔离与映射关系。
 2. **提供跨系统调用指南**：当遇到需要对 Windows 进行直接调用的任务时，引导 Agent 采用正确的桥接方式（如通过 `pwsh.exe` 调用 Windows PowerShell）执行。
+
+## 终端工具
+
+**文件**: [windows-terminal.json](./windows-terminal.json) | [starship.toml](./starship.toml)
+
+- **windows-terminal.json** - Windows Terminal 的配置文件，包含主题、快捷键、终端配置等设置
+- **starship.toml** - Starship 跨平台 shell 提示符的配置文件，支持 Fish/Bash/Zsh 等多种 shell
 
 ## Fish Shell 开发工具
 
