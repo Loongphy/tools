@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.2.0
+// @version      1.2.1
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -541,6 +541,10 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
             'aside[role="complementary"]',
         )) {
             hideAncestor(aside, 2);
+        }
+        hide(sidebar.querySelector('div[data-testid="whoToFollowSspAd"]'));
+        for (const nav of sidebar.querySelectorAll('nav[role="navigation"]')) {
+            hide(nav);
         }
     }
 
