@@ -5,7 +5,7 @@
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=x.com
-// @version      1.2.1
+// @version      1.3.0
 // @match        https://x.com/*
 // @run-at       document-start
 // @grant        GM_getValue
@@ -216,11 +216,12 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
     }
 
     function buildSearchUrl(query, options = {}) {
-        const { latest = true } = options;
+        const { latest = true, top = false } = options;
         const url = new URL("https://x.com/search");
         url.searchParams.set("q", query);
         url.searchParams.set("src", "typed_query");
-        if (latest) url.searchParams.set("f", "live");
+        if (top) url.searchParams.set("f", "top");
+        else if (latest) url.searchParams.set("f", "live");
         return url.toString();
     }
 
@@ -659,20 +660,49 @@ div:has([data-testid^="tweetTextarea"]):has([role="progressbar"]):not(:has(artic
     const mo = new MutationObserver(() => scheduleCleanup());
     mo.observe(document.documentElement, { childList: true, subtree: true });
 
+    function injectSearchTopParam(url) {
+        if (typeof url !== "string") return url;
+        try {
+            const u = new URL(url, location.href);
+            if (u.pathname === "/search" && u.searchParams.get("src") === "typed_query" && !u.searchParams.get("f")) {
+                u.searchParams.set("f", "top");
+                return u.pathname + u.search;
+            }
+        } catch (e) {}
+        return url;
+    }
+
     const originalPushState = history.pushState;
-    history.pushState = function () {
-        const ret = originalPushState.apply(this, arguments);
+    history.pushState = function (state, title, url) {
+        url = injectSearchTopParam(url);
+        const ret = originalPushState.call(this, state, title, url);
         scheduleCleanup();
         return ret;
     };
 
     const originalReplaceState = history.replaceState;
-    history.replaceState = function () {
-        const ret = originalReplaceState.apply(this, arguments);
+    history.replaceState = function (state, title, url) {
+        url = injectSearchTopParam(url);
+        const ret = originalReplaceState.call(this, state, title, url);
         scheduleCleanup();
         return ret;
     };
 
     window.addEventListener("popstate", () => scheduleCleanup());
+
+    document.addEventListener("submit", (e) => {
+        const form = e.target;
+        if (!form || form.getAttribute("role") !== "search") return;
+        const input = form.querySelector(
+            'input[type="text"], input[type="search"], input:not([type])',
+        );
+        if (!input) return;
+        const q = input.value.trim();
+        if (!q) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        location.href = buildSearchUrl(q, { top: true });
+    }, true);
+
     scheduleCleanup();
 })();
