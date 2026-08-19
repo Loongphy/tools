@@ -49,6 +49,8 @@
 | **x-com-block.user.js** | 黑名单csv批量屏蔽 | [x-com-block.user.js](./x-com-block.user.js) |
 | **m365-copilot-gpt-deep-thinking** | 打开 Microsoft 365 Copilot 聊天页时，自动通过模型选择器多级菜单将模型设为「GPT 5.6 深度思考」 | [m365-copilot.user.js](./m365-copilot.user.js) |
 
+<img width="2116" height="1216" alt="PixPin_2026-08-19_15-50-11" src="https://github.com/user-attachments/assets/867cad64-5094-40d2-a568-ad0c2600c84c" />
+
 ### x-clean.user.js
 
 - 隐藏不必要的营销按钮
