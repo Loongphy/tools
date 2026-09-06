@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         linux.do 发帖时间列
 // @namespace    https://loongphy.com
-// @version      1.1.0
-// @description  Add a "created-at" column to linux.do topic lists (homepage, /tag/*, categories, suggested topics). Discourse list pages only show last activity; this script captures each topic's created_at from the list JSON (fetch/XHR hook at document-start) and injects an extra column before "活动".
+// @version      1.2.0
+// @description  为 linux.do 话题列表增加发帖时间列
 // @author       loongphy
 // @license      MIT
 // @icon64       https://www.google.com/s2/favicons?sz=64&domain=linux.do
@@ -18,6 +18,9 @@
 //   - document-start 拦截页面的 fetch / XHR，收集 id -> created_at：.json 列表/单帖响应 +
 //     message-bus 长轮询（实时插入列表的新主题只出现在轮询载荷里），并写 localStorage 缓存兜底。
 //   - 给每张 .topic-list 表在"活动"列前注入"发帖"列；表头与单元格都补。
+//   - 移动端是单格行布局（标题/分类/活动挤在一个 td 里），独立列太占宽：改以内联小字挂进
+//     活动时间节点，借其 margin-left:auto 与其成对贴右；html.mobile-view 或窄窗口（媒体
+//     查询兜底）时由 CSS 自动切换。
 //   - SPA 路由切换、无限滚动、Ember 重渲染导致的行增删，由 MutationObserver + 低频轮询兜底补齐。
 //
 (function () {
@@ -151,9 +154,28 @@
 
   function injectStyle() {
     var style = document.createElement('style');
+    var INLINE_SEL = '.' + COL_CLASS + '-inline';
+    // 字号/行高必须和"最近活跃时间"（.num.activity，.87rem/1.2）一致：
+    // linux.do 的 .topic-item-stats 是 flex + align-items:baseline，两组字号行高一旦
+    // 不同，基线虽对齐但盒高不同，视觉上会差出约 1px 的上下错位
+    var inlineCss =
+      INLINE_SEL + '{display:inline-block;font-size:.87rem;line-height:1.2;color:var(--primary-medium,#919191);' +
+      'margin:0 8px;white-space:nowrap;}';
+    // 活动时间（.num.activity，margin-left:auto）盒子禁止收缩换行，保证两个时间单行成对贴右
+    var actCss = '.topic-list .topic-item-stats .num.activity{white-space:nowrap;flex-shrink:0;}';
+    // 桌面端用独立列；移动端藏列、改内联显示。两套环境选择器任一命中即可：
+    // Discourse 移动视图有 html.mobile-view 类，窄窗口（桌面 UA）走媒体查询兜底。
     style.textContent =
       'table.topic-list th.' + COL_CLASS + '{text-align:right;white-space:nowrap;}' +
-      'table.topic-list td.' + COL_CLASS + '{text-align:right;white-space:nowrap;font-size:.93em;color:var(--primary-medium,#919191);}';
+      'table.topic-list td.' + COL_CLASS + '{text-align:right;white-space:nowrap;font-size:.93em;color:var(--primary-medium,#919191);}' +
+      INLINE_SEL + '{display:none;}' +
+      INLINE_SEL + ':empty{display:none!important;}' +
+      'html.mobile-view table.topic-list th.' + COL_CLASS + ',html.mobile-view table.topic-list td.' + COL_CLASS + '{display:none!important;}' +
+      'html.mobile-view ' + inlineCss + actCss +
+      '@media (max-width:580px){' +
+      'table.topic-list th.' + COL_CLASS + ',table.topic-list td.' + COL_CLASS + '{display:none!important;}' +
+      inlineCss + actCss +
+      '}';
     (document.head || document.documentElement).appendChild(style);
   }
 
@@ -186,7 +208,6 @@
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(td, anchor);
         else row.appendChild(td);
       }
-      if (td.dataset.filled === id) continue; // 已按该主题填充过
 
       var created = createdMap.get(id);
       if (!created) continue;
@@ -194,9 +215,30 @@
       if (!isFinite(ts)) continue;
 
       var d = new Date(ts);
-      td.textContent = fmtShort(d);
-      td.title = fmtFull(d);
-      td.dataset.filled = id;
+      if (td.dataset.filled !== id) { // 已按该主题填充过就不再写
+        td.textContent = fmtShort(d);
+        td.title = fmtFull(d);
+        td.dataset.filled = id;
+      }
+
+      // 移动端内联节点：插进"分类/标签 + 活动"统计行（无该结构时退回标题容器），显不显示由 CSS 决定
+      var inline = row.querySelector('.' + COL_CLASS + '-inline');
+      if (!inline) {
+        var stats = row.querySelector('.topic-item-stats');
+        var holder = stats || row.querySelector('.main-link');
+        if (!holder) continue;
+        inline = document.createElement('span');
+        inline.className = COL_CLASS + '-inline';
+        var act = stats && stats.querySelector('.num.activity');
+        // 挂进活动时间节点内部：借它的 margin-left:auto 一起被推到行尾，永远成对右对齐
+        if (act) act.insertBefore(inline, act.firstChild);
+        else holder.appendChild(inline);
+      }
+      if (inline.dataset.filled !== id) {
+        inline.textContent = fmtShort(d);
+        inline.title = fmtFull(d);
+        inline.dataset.filled = id;
+      }
     }
   }
 
