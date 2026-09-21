@@ -48,6 +48,7 @@
 | **X 回复过滤** | 从用户 `/with_replies` 里筛出有非本人回复的回复，并可内联展开对话。 | [x-reply-filter.user.js](./x-reply-filter.user.js) |
 | **x-com-block.user.js** | 黑名单csv批量屏蔽 | [x-com-block.user.js](./x-com-block.user.js) |
 | **m365-copilot-gpt-deep-thinking** | 打开 Microsoft 365 Copilot 聊天页时，自动通过模型选择器多级菜单将模型设为「GPT 5.6 深度思考」 | [m365-copilot.user.js](./m365-copilot.user.js) |
+| **linux.do 发帖时间列** | 给 linux.do 话题列表在"活动"列前新增发帖时间列 | [linux-do-post-time.user.js](./linux-do-post-time.user.js) |
 
 <img width="2116" height="1216" alt="PixPin_2026-08-19_15-50-11" src="https://github.com/user-attachments/assets/867cad64-5094-40d2-a568-ad0c2600c84c" />
 
@@ -78,3 +79,10 @@ header[role="banner"]  (width=88 via CSS)
                ├─ div (extra-1, 宽度变小时会隐藏)
                └─ div (extra-2, 宽度变小时会隐藏)
 ```
+
+### linux.do 发帖时间列
+
+- **功能描述**：给 linux.do 的话题列表（首页、`/tag/*`、分类页、话题内推荐列表）在"活动"列前新增一列**发帖时间**。Discourse 列表页只渲染最后回复时间，创建时间只存在于列表 JSON 里；脚本在 `document-start` 拦截页面的 fetch/XHR，从 `.json` 列表响应和 message-bus 长轮询（实时插入的新主题只在这里）收集创建时间（`#data-preloaded` 首屏内嵌数据 + localStorage 缓存兜底），再给每张 `.topic-list` 表注入表头与单元格。SPA 路由切换、无限滚动、Ember 重渲染由 MutationObserver + 低频轮询补齐；移动端和 Horizon 卡片主题改以内联小字挂进活动时间节点。
+- **显示规则**：与"活动"列同风格的紧凑格式——今天显示 `HH:mm`，昨天/前天显示"昨天/前天"，一周内显示 `N天前`，更早显示日期（当年 `MM-DD`，往年 `YYYY-MM-DD`），悬停可看完整本地时间。
+
+<img src="./images/linuxdo-created-at.png" width="80%" alt="linux.do 发帖时间列">
