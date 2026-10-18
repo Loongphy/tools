@@ -47,7 +47,7 @@
 | **x.user.js** | 树状结构标记 X 左侧栏相关页面元素 | [x.user.js](./x.user.js) |
 | **X 回复过滤** | 从用户 `/with_replies` 里筛出有非本人回复的回复，并可内联展开对话。 | [x-reply-filter.user.js](./x-reply-filter.user.js) |
 | **x-com-block.user.js** | 黑名单csv批量屏蔽 | [x-com-block.user.js](./x-com-block.user.js) |
-| **m365-copilot-gpt-deep-thinking** | 打开 Microsoft 365 Copilot 聊天页时，自动通过模型选择器多级菜单将模型设为「GPT 5.6 深度思考」 | [m365-copilot.user.js](./m365-copilot.user.js) |
+| **m365-copilot-gpt-deep-thinking** | 打开 Microsoft 365 Copilot 聊天页或新建聊天时，自动将模型选择器设为「深度思考」（适配单层扁平菜单，兼容旧版两级菜单） | [m365-copilot.user.js](./m365-copilot.user.js) |
 | **linux.do 发帖时间列** | 给 linux.do 话题列表新增发帖时间列，适配移动端和多主题 | [linux-do-post-time.user.js](./linux-do-post-time.user.js) |
 
 <img width="2116" height="1216" alt="PixPin_2026-08-19_15-50-11" src="https://github.com/user-attachments/assets/867cad64-5094-40d2-a568-ad0c2600c84c" />

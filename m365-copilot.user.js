@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         m365-copilot-gpt-deep-thinking
-// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器菜单将模型设为「GPT-5.6 Sol 深度思考」
+// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器将模型设为「深度思考」（适配单层扁平菜单）
 // @namespace    https://loongphy.com
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=m365.cloud.microsoft
-// @version      1.2.1
+// @version      1.2.2
 // @match        https://m365.cloud.microsoft/chat*
 // @match        https://m365.cloud.microsoft/*
 // @match        https://copilot.cloud.microsoft/chat*
@@ -18,21 +18,26 @@
     'use strict';
 
     // ==================== 配置 ====================
-    // 目标模型：「GPT-5.6 Sol」系列的「深度思考」（同组还有「快速思考」，勿混淆）。
-    // 兼容两种菜单结构：扁平（菜单项直接叫「GPT-5.6 Sol 深度思考」）
-    // 或子菜单（「GPT-5.6 Sol / GPT OpenAI」下含「快速思考」「深度思考」两项）。
-    // Sol 系列识别：匹配 "Sol"/"5.6"/"5-6"（兼容 "GPT-5.6" 连字符写法）
+    // 目标：模型选择器里的「深度思考」（Deep thinking）。
+    // 2026-10 起菜单改为单层扁平结构：自动 / 快速响应 / 深度思考，
+    // 不再有「GPT-5.6 Sol」子菜单；旧版两级结构仍保留兼容。
+    // 新版菜单项带稳定的 data-testid（Magic/Chat/Reasoning），优先用它定位。
+    const REASONING_TESTID = 'gptSubMenuModelTrigger-Reasoning';
+    const QUICK_TESTID = 'gptSubMenuModelTrigger-Chat';
+    // 旧版 Sol 系列识别（兼容残留文案）
     const SOL_RE = /Sol|5[.\-]6/;
     // 「深度思考」菜单项可能出现的文本（中英文界面各一份）
     const DEEP_MARKS = ['深度思考', '深入思考', 'Think deeper', 'Deep thinking', 'Deeper'];
-    // 「快速思考」干扰项：命中即排除（必须先于 DEEP 判断，"快速思考" 本身含 "思考"）
+    // 「快速响应/快速思考」干扰项：命中即排除（必须先于 DEEP 判断）
     const QUICK_MARKS = ['快速', 'Quick', 'Fast', 'Rapid', '即时'];
-    // 按钮缩写文本里代表已选中深度思考的标记（如旧版「GPT 5.6 思考」、可能的「Sol Think」）
+    // 按钮缩写文本里代表已选中深度思考的标记（如旧版「GPT 5.6 思考」）
     const BTN_DEEP_EXTRA = ['思考', 'Think'];
-    // 子菜单触发项（带孙菜单的 menuitem）文本标记：旧版「GPT OpenAI」，新版或为「GPT-5.6 Sol …」
+    // 子菜单触发项（旧版两级菜单：带孙菜单的 menuitem，如「GPT-5.6 Sol / GPT OpenAI」）
     const SUBMENU_MARKS = ['Sol', '5.6', '5-6', 'OpenAI'];
     // 模型选择按钮（顶部「自动」/当前模型）
     const BTN_SELECTOR = '#gptModeSwitcher';
+    // 点击后等待菜单出现的时长（SPA 水合未完成时首次点击可能被吞，需快速重试）
+    const MENU_OPEN_TIMEOUT = 2000;
     // 菜单项匹配超时
     const MENU_TIMEOUT = 3000;
     // 点击后等待菜单关闭的时间
@@ -41,6 +46,8 @@
     const NAV_DELAY = 500;
     // 兜底轮询间隔（一次 getElementById + 文本比较，开销极小）
     const POLL_INTERVAL = 2000;
+    // 扁平菜单没有子菜单时的宽限时长：等子菜单渲染出来再决定，避免误点主菜单默认项
+    const FLAT_GRACE = 400;
     // applyModel 单次触发内的最大尝试次数（点击可能被 SPA 重渲染吞掉）
     const MAX_ATTEMPTS = 3;
     // 展开子菜单的点击被吞后，隔多久补点一次
@@ -116,25 +123,29 @@
         return false;
     }
 
-    // 收集菜单中所有「深度思考」候选项，按与 Sol 的关联度打分排序：
-    // 3 = 文本自带 Sol/5.6（如「GPT-5.6 Sol 深度思考」）
+    // 收集菜单中所有「深度思考」候选项，按可靠度打分排序：
+    // 4 = 命中新版 data-testid（Reasoning）
+    // 3 = 文本自带 Sol/5.6（如旧版「GPT-5.6 Sol 深度思考」）
     // 2 = 文本只有「深度思考」但位于 Sol 子菜单/分组内
-    // 1 = 裸「深度思考」（主菜单默认模型项之类），仅作兜底
+    // 1 = 裸「深度思考」（扁平主菜单项），仅作兜底
     function findTargets() {
         const cands = [];
         for (const el of document.querySelectorAll(ITEM_SELECTOR)) {
             if (el.hasAttribute('aria-haspopup') || !visible(el)) continue;
+            const tid = el.getAttribute('data-testid') || '';
+            if (tid === QUICK_TESTID) continue;
             const t = norm(el.textContent);
-            if (!DEEP_MARKS.some(m => t.includes(m))) continue;
             if (QUICK_MARKS.some(m => t.includes(m))) continue;
-            const score = SOL_RE.test(t) ? 3 : (inSolMenu(el) ? 2 : 1);
+            const byTestId = tid === REASONING_TESTID;
+            if (!byTestId && !DEEP_MARKS.some(m => t.includes(m))) continue;
+            const score = byTestId ? 4 : (SOL_RE.test(t) ? 3 : (inSolMenu(el) ? 2 : 1));
             cands.push({ el, score });
         }
         return cands.sort((a, b) => b.score - a.score);
     }
 
-    // 在已打开的菜单里定位目标项：发现 Sol 子菜单就先展开（点击被吞按间隔补点），
-    // 出现 Sol 关联项立即返回；裸「深度思考」留作兜底。
+    // 在已打开的菜单里定位目标项：新版单层菜单直接返回「深度思考」；
+    // 旧版发现 Sol 子菜单就先展开（点击被吞按间隔补点），出现 Sol 关联项立即返回。
     // 超时时：存在子菜单说明是嵌套结构，兜底项只认子菜单面板内的项——
     // 主菜单的裸「深度思考」属于默认模型，点它会选错，宁可返回 null 让外层重试。
     async function resolveTarget() {
@@ -142,14 +153,22 @@
         let cands = [];
         let sub = null;
         let subClickAt = 0;
+        let flatSince = 0;
         while (Date.now() < deadline) {
             cands = findTargets();
-            if (cands.length && cands[0].score >= 2) return cands[0].el;
+            if (cands.length && cands[0].score >= 3) return cands[0].el;
             sub = findSubmenu() || sub;
             if (sub && sub.getAttribute('aria-expanded') !== 'true' &&
                 Date.now() - subClickAt > SUBMENU_CLICK_GAP) {
                 subClickAt = Date.now();
                 sub.click();
+            }
+            if (cands.length && !sub) {
+                // 扁平单层菜单：给子菜单一个短暂宽限，之后直接返回最佳候选
+                if (!flatSince) flatSince = Date.now();
+                if (Date.now() - flatSince >= FLAT_GRACE) return cands[0].el;
+            } else {
+                flatSince = 0;
             }
             await sleep(50);
         }
@@ -166,29 +185,44 @@
         return cands[0].el;
     }
 
-    // 判断当前是否已经选中目标模型。按钮文案四种情况：
-    // 不含 Sol 标记（如「自动」）→ 未选中，同时清空 confirmed；
-    // 含快速思考标记 → 未选中（同组选错了，需要纠正）；
+    // 判断当前是否已经选中目标模型。新版按钮文案就是「深度思考」；
+    // 四种情况：
+    // 含快速响应标记 → 未选中（同组选错了，需要纠正）；
     // 含深度思考标记 → 已选中；
-    // 只显示「GPT-5.6 Sol」无子型号 → 以本会话是否点过目标项（confirmed）为准，
-    // 否则会每 POLL_INTERVAL 闪开一次菜单。
+    // 旧版只显示「GPT-5.6 Sol」无子型号 → 以本会话是否点过目标项（confirmed）为准，
+    // 否则会每 POLL_INTERVAL 闪开一次菜单；
+    // 其余（如「自动」）→ 未选中，同时清空 confirmed。
     let confirmed = false;
     function alreadySelected(btn) {
         const t = norm(btn.textContent + ' ' +
             (btn.getAttribute('aria-label') || '') + ' ' + (btn.getAttribute('title') || ''));
-        if (!SOL_RE.test(t) || QUICK_MARKS.some(m => t.includes(m))) {
+        if (QUICK_MARKS.some(m => t.includes(m))) {
             confirmed = false;
             return false;
         }
-        if (DEEP_MARKS.concat(BTN_DEEP_EXTRA).some(m => t.includes(m))) return true;
-        return confirmed;
+        if (DEEP_MARKS.some(m => t.includes(m))) return true;
+        if (SOL_RE.test(t) && BTN_DEEP_EXTRA.some(m => t.includes(m))) return true;
+        if (SOL_RE.test(t)) return confirmed;
+        confirmed = false;
+        return false;
     }
 
     // 菜单是否正处于打开状态（用户手动打开时不要打断）
     function menuOpen() {
         const btn = document.getElementById('gptModeSwitcher');
-        return (btn && btn.getAttribute('aria-expanded') === 'true') ||
-            !!document.querySelector('[role="menu"]');
+        if (btn && btn.getAttribute('aria-expanded') === 'true') return true;
+        return [...document.querySelectorAll('[role="menu"],[role="listbox"]')].some(visible);
+    }
+
+    // 点击模型按钮并等菜单真正出现（返回 false 表示这次点击被 SPA 吞了）
+    async function openMenu(btn) {
+        const deadline = Date.now() + MENU_OPEN_TIMEOUT;
+        btn.click();
+        while (Date.now() < deadline) {
+            await sleep(50);
+            if (menuOpen()) return true;
+        }
+        return false;
     }
 
     // ==================== 触发调度 ====================
@@ -233,9 +267,10 @@
             // 2. 已经是目标模型则跳过
             if (alreadySelected(btn)) return;
 
-            // 3. 点击展开菜单，定位并点击「深度思考」（扁平/子菜单结构自适应，
-            //    Sol 子菜单存在时 resolveTarget 会自动展开并补点）
-            btn.click();
+            // 3. 点击展开菜单（水合未完成时点击可能被吞，openMenu 会短间隔重试），
+            //    再定位并点击「深度思考」（新版单层菜单直接命中；
+            //    旧版 Sol 子菜单存在时 resolveTarget 会自动展开并补点）
+            if (!(await openMenu(btn))) { pressEscape(); continue; }
             const target = await resolveTarget();
             if (!target) { pressEscape(); continue; }
             target.click();
@@ -247,12 +282,18 @@
         }
     }
 
-    // 菜单没找到目标项时按 Esc 收起，避免菜单一直挂着
+    // 菜单没找到目标项时按 Esc 收起；Fluent UI 对合成 Esc 不一定响应，
+    // 隔一帧仍未关闭就直接点触发器收起，避免菜单一直挂着阻挡后续重试
     function pressEscape() {
         document.activeElement && document.activeElement.dispatchEvent(
             new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         document.body.dispatchEvent(
             new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        setTimeout(() => {
+            if (!menuOpen()) return;
+            const btn = document.getElementById('gptModeSwitcher');
+            if (btn) btn.click();
+        }, 200);
     }
 
     // ==================== 三类触发源 ====================
