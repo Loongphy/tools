@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         m365-copilot-gpt-deep-thinking
-// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器将模型设为「深度思考」（适配单层扁平菜单）
+// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器将模型设为「GPT-5.6 Sol 深度思考」；无 Sol 子菜单时回退到扁平「深度思考」
 // @namespace    https://loongphy.com
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=m365.cloud.microsoft
-// @version      1.2.2
+// @version      1.2.3
 // @match        https://m365.cloud.microsoft/chat*
 // @match        https://m365.cloud.microsoft/*
 // @match        https://copilot.cloud.microsoft/chat*
@@ -18,21 +18,27 @@
     'use strict';
 
     // ==================== 配置 ====================
-    // 目标：模型选择器里的「深度思考」（Deep thinking）。
-    // 2026-10 起菜单改为单层扁平结构：自动 / 快速响应 / 深度思考，
-    // 不再有「GPT-5.6 Sol」子菜单；旧版两级结构仍保留兼容。
-    // 新版菜单项带稳定的 data-testid（Magic/Chat/Reasoning），优先用它定位。
+    // 目标：优先「GPT-5.6 Sol」子菜单里的「深度思考」。
+    // 菜单结构会随账号/灰度来回切换：
+    //   A) 逐级菜单：自动 / 快速响应 / 深度思考 / GPT OpenAI
+    //      → GPT-5.6 Sol 快速响应 / GPT-5.6 Sol 深度思考
+    //   B) 单层扁平：自动 / 快速响应 / 深度思考
+    // 两种都要兼容。A 存在时主菜单的扁平「深度思考」只是默认模型，
+    // 必须展开 Sol 子菜单选「GPT-5.6 Sol 深度思考」，不能先点扁平项。
+    // 菜单项带稳定的 data-testid（Magic/Chat/Reasoning/OpenAI），优先用它定位。
     const REASONING_TESTID = 'gptSubMenuModelTrigger-Reasoning';
     const QUICK_TESTID = 'gptSubMenuModelTrigger-Chat';
-    // 旧版 Sol 系列识别（兼容残留文案）
+    // Sol 子菜单触发项 testid；子菜单选项复用同一 testid，靠 aria-haspopup 区分
+    const OPENAI_TESTID = 'gptSubMenuModelTrigger-OpenAI';
+    // Sol 系列识别（兼容「Sol」与「5.6 / 5-6」两种文案）
     const SOL_RE = /Sol|5[.\-]6/;
     // 「深度思考」菜单项可能出现的文本（中英文界面各一份）
     const DEEP_MARKS = ['深度思考', '深入思考', 'Think deeper', 'Deep thinking', 'Deeper'];
     // 「快速响应/快速思考」干扰项：命中即排除（必须先于 DEEP 判断）
     const QUICK_MARKS = ['快速', 'Quick', 'Fast', 'Rapid', '即时'];
-    // 按钮缩写文本里代表已选中深度思考的标记（如旧版「GPT 5.6 思考」）
+    // 按钮缩写文本里代表已选中深度思考的标记（如「GPT-5.6 Sol Think」「GPT 5.6 思考」）
     const BTN_DEEP_EXTRA = ['思考', 'Think'];
-    // 子菜单触发项（旧版两级菜单：带孙菜单的 menuitem，如「GPT-5.6 Sol / GPT OpenAI」）
+    // 子菜单触发项（如「GPT OpenAI」「GPT-5.6 Sol …」；带 aria-haspopup）
     const SUBMENU_MARKS = ['Sol', '5.6', '5-6', 'OpenAI'];
     // 模型选择按钮（顶部「自动」/当前模型）
     const BTN_SELECTOR = '#gptModeSwitcher';
@@ -83,12 +89,15 @@
     }
 
     // ==================== 菜单项查找 ====================
-    // 查找带子菜单的菜单项（有 aria-haspopup / aria-expanded），文本需命中 Sol/GPT 系列标记
+    // 查找 Sol 子菜单触发项（有 aria-haspopup / aria-expanded）。
+    // 优先 data-testid，其次文本命中 Sol/GPT 系列标记；
+    // 子菜单里的选项也带 OPENAI_TESTID，但只有触发项有 aria-haspopup。
     function findSubmenu() {
         const items = document.querySelectorAll('[role="menuitem"]');
         for (const el of items) {
             if (!el.hasAttribute('aria-haspopup') && !el.hasAttribute('aria-expanded')) continue;
             if (!visible(el)) continue;
+            if (el.getAttribute('data-testid') === OPENAI_TESTID) return el;
             const t = norm(el.textContent);
             if (SUBMENU_MARKS.some(m => t.includes(m))) return el;
         }
@@ -124,10 +133,12 @@
     }
 
     // 收集菜单中所有「深度思考」候选项，按可靠度打分排序：
-    // 4 = 命中新版 data-testid（Reasoning）
-    // 3 = 文本自带 Sol/5.6（如旧版「GPT-5.6 Sol 深度思考」）
-    // 2 = 文本只有「深度思考」但位于 Sol 子菜单/分组内
-    // 1 = 裸「深度思考」（扁平主菜单项），仅作兜底
+    // 4 = 文本自带 Sol/5.6（Sol 子菜单里的「GPT-5.6 Sol 深度思考」）
+    // 3 = 文本只有「深度思考」但位于 Sol 子菜单/分组内
+    // 2 = 扁平主菜单的「深度思考」（data-testid=Reasoning，默认模型）
+    // 1 = 裸「深度思考」（其他兜底）
+    // 注意：Sol 项必须优先于扁平 Reasoning 项——两者同时存在时选错就会
+    // 停在默认模型上，按钮只显示「深度思考」，看起来像已完成。
     function findTargets() {
         const cands = [];
         for (const el of document.querySelectorAll(ITEM_SELECTOR)) {
@@ -138,16 +149,19 @@
             if (QUICK_MARKS.some(m => t.includes(m))) continue;
             const byTestId = tid === REASONING_TESTID;
             if (!byTestId && !DEEP_MARKS.some(m => t.includes(m))) continue;
-            const score = byTestId ? 4 : (SOL_RE.test(t) ? 3 : (inSolMenu(el) ? 2 : 1));
+            const score = SOL_RE.test(t) ? 4
+                : (inSolMenu(el) ? 3 : (byTestId ? 2 : 1));
             cands.push({ el, score });
         }
         return cands.sort((a, b) => b.score - a.score);
     }
 
-    // 在已打开的菜单里定位目标项：新版单层菜单直接返回「深度思考」；
-    // 旧版发现 Sol 子菜单就先展开（点击被吞按间隔补点），出现 Sol 关联项立即返回。
-    // 超时时：存在子菜单说明是嵌套结构，兜底项只认子菜单面板内的项——
-    // 主菜单的裸「深度思考」属于默认模型，点它会选错，宁可返回 null 让外层重试。
+    // 在已打开的菜单里定位目标项：
+    // 1) 有 Sol 子菜单时，展开「GPT OpenAI」，只认子菜单里的「深度思考」；
+    //    主菜单的扁平「深度思考」属于默认模型，绝不先点（点了按钮也只显示
+    //    「深度思考」，会被误判为已完成，永远回不到 Sol）。
+    // 2) 纯扁平菜单时，宽限 FLAT_GRACE 后选「深度思考」。
+    // 超时时若存在子菜单，只接受子菜单面板内的候选，否则返回 null 让外层重试。
     async function resolveTarget() {
         const deadline = Date.now() + MENU_TIMEOUT;
         let cands = [];
@@ -155,43 +169,57 @@
         let subClickAt = 0;
         let flatSince = 0;
         while (Date.now() < deadline) {
+            const curSub = findSubmenu();
+            if (curSub) sub = curSub;
+            else if (sub && !visible(sub)) sub = null;
             cands = findTargets();
-            if (cands.length && cands[0].score >= 3) return cands[0].el;
-            sub = findSubmenu() || sub;
-            if (sub && sub.getAttribute('aria-expanded') !== 'true' &&
-                Date.now() - subClickAt > SUBMENU_CLICK_GAP) {
-                subClickAt = Date.now();
-                sub.click();
-            }
-            if (cands.length && !sub) {
-                // 扁平单层菜单：给子菜单一个短暂宽限，之后直接返回最佳候选
+            // 文本明确带 Sol/5.6 的深度思考：目标项，直接命中
+            const solDeep = cands.find(c => c.score >= 4);
+            if (solDeep) { solAvailable = true; return solDeep.el; }
+            if (sub) {
+                // 存在子菜单：先展开，再等子菜单里的 Sol 项，不选主菜单扁平项
+                solAvailable = true;
+                if (sub.getAttribute('aria-expanded') !== 'true' &&
+                    Date.now() - subClickAt > SUBMENU_CLICK_GAP) {
+                    subClickAt = Date.now();
+                    sub.click();
+                }
+                flatSince = 0;
+            } else if (cands.length) {
+                // 没有子菜单：给 SPA 一点渲染宽限，确认是扁平菜单再选
                 if (!flatSince) flatSince = Date.now();
-                if (Date.now() - flatSince >= FLAT_GRACE) return cands[0].el;
+                if (Date.now() - flatSince >= FLAT_GRACE) {
+                    solAvailable = false;
+                    return cands[0].el;
+                }
             } else {
                 flatSince = 0;
             }
             await sleep(50);
         }
         if (!cands.length) return null;
-        const lastSub = findSubmenu() || sub;
-        if (lastSub) {
-            const parentMenu = lastSub.closest('[role="menu"],[role="listbox"]');
+        if (sub) {
+            const parentMenu = sub.closest('[role="menu"],[role="listbox"]');
             const nested = cands.find(c => {
                 const cm = c.el.closest('[role="menu"],[role="listbox"]');
                 return cm && cm !== parentMenu;
             });
-            return nested ? nested.el : null;
+            if (nested) { solAvailable = true; return nested.el; }
+            return null;
         }
+        solAvailable = false;
         return cands[0].el;
     }
 
-    // 判断当前是否已经选中目标模型。新版按钮文案就是「深度思考」；
-    // 四种情况：
+    // 判断当前是否已经选中目标模型。按钮文案几种情况：
+    // 「GPT-5.6 Sol Think/思考」→ 已选中 Sol 深度思考；
     // 含快速响应标记 → 未选中（同组选错了，需要纠正）；
-    // 含深度思考标记 → 已选中；
-    // 旧版只显示「GPT-5.6 Sol」无子型号 → 以本会话是否点过目标项（confirmed）为准，
-    // 否则会每 POLL_INTERVAL 闪开一次菜单；
+    // 只显示「深度思考」→ 可能是扁平默认模型：仅当确认菜单里没有 Sol 子菜单
+    //   （solAvailable === false）时才算已选中，否则要开菜单确认/纠正；
+    // 只显示「GPT-5.6 Sol」无子型号 → 以本会话是否点过目标项（confirmed）为准；
     // 其余（如「自动」）→ 未选中，同时清空 confirmed。
+    // solAvailable: null=尚未确认; true=存在 Sol 子菜单; false=纯扁平菜单
+    let solAvailable = null;
     let confirmed = false;
     function alreadySelected(btn) {
         const t = norm(btn.textContent + ' ' +
@@ -200,9 +228,11 @@
             confirmed = false;
             return false;
         }
-        if (DEEP_MARKS.some(m => t.includes(m))) return true;
-        if (SOL_RE.test(t) && BTN_DEEP_EXTRA.some(m => t.includes(m))) return true;
-        if (SOL_RE.test(t)) return confirmed;
+        if (SOL_RE.test(t)) {
+            if (DEEP_MARKS.some(m => t.includes(m)) || BTN_DEEP_EXTRA.some(m => t.includes(m))) return true;
+            return confirmed;
+        }
+        if (DEEP_MARKS.some(m => t.includes(m))) return solAvailable === false;
         confirmed = false;
         return false;
     }
