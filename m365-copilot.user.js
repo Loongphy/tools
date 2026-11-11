@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name         m365-copilot-gpt-deep-thinking
-// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器将模型设为「GPT-5.6 Sol 深度思考」；无 Sol 子菜单时回退到扁平「深度思考」
+// @description  打开 Microsoft 365 Copilot 聊天页或点击「新建聊天」时，自动通过模型选择器将模型设为「GPT-5.6 Sol 深度思考」；并在 WebSocket 发送层改写 tone 兜底，菜单点不上时消息仍按深度思考发出
 // @namespace    https://loongphy.com
 // @author       Loongphy
 // @license      PolyForm-Noncommercial-1.0.0; https://polyformproject.org/licenses/noncommercial/1.0.0/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=m365.cloud.microsoft
-// @version      1.2.3
+// @version      1.3.0
 // @match        https://m365.cloud.microsoft/chat*
 // @match        https://m365.cloud.microsoft/*
 // @match        https://copilot.cloud.microsoft/chat*
-// @run-at       document-idle
+// @match        https://copilot.com/*
+// @run-at       document-start
 // @grant        none
 // @noframes
 // ==/UserScript==
@@ -41,7 +42,7 @@
     // 子菜单触发项（如「GPT OpenAI」「GPT-5.6 Sol …」；带 aria-haspopup）
     const SUBMENU_MARKS = ['Sol', '5.6', '5-6', 'OpenAI'];
     // 模型选择按钮（顶部「自动」/当前模型）
-    const BTN_SELECTOR = '#gptModeSwitcher';
+    const BTN_SELECTOR = '#gptModeSwitcher,button[aria-label*="模型选择器"],button[aria-label*="model selector" i]';
     // 点击后等待菜单出现的时长（SPA 水合未完成时首次点击可能被吞，需快速重试）
     const MENU_OPEN_TIMEOUT = 2000;
     // 菜单项匹配超时
@@ -60,6 +61,35 @@
     const SUBMENU_CLICK_GAP = 700;
     // 可选中项的 role（一般是 menuitemradio；扁平结构兜底含 menuitem/option/checkbox）
     const ITEM_SELECTOR = '[role="menuitemradio"],[role="menuitemcheckbox"],[role="option"],[role="menuitem"]';
+
+    const TONE = 'Gpt_5_6_Reasoning';
+    const RS = '\x1e';
+
+    function patchPayload(text) {
+        const records = text.split(RS);
+        let changed = false;
+        for (let i = 0; i < records.length; i++) {
+            const rec = records[i];
+            if (!rec || rec[0] !== '{') continue;
+            let msg;
+            try { msg = JSON.parse(rec); } catch (_) { continue; }
+            const a0 = msg && msg.arguments && msg.arguments[0];
+            if (msg.target === 'chat' && a0 && typeof a0 === 'object' && 'tone' in a0 && a0.tone !== TONE) {
+                a0.tone = TONE;
+                records[i] = JSON.stringify(msg);
+                changed = true;
+            }
+        }
+        return changed ? records.join(RS) : text;
+    }
+
+    const origSend = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (data) {
+        if (typeof data === 'string' && data.indexOf('"target":"chat"') !== -1) {
+            try { data = patchPayload(data); } catch (_) {}
+        }
+        return origSend.call(this, data);
+    };
 
     // 归一化文本：合并空白
     function norm(t) {
@@ -239,7 +269,7 @@
 
     // 菜单是否正处于打开状态（用户手动打开时不要打断）
     function menuOpen() {
-        const btn = document.getElementById('gptModeSwitcher');
+        const btn = document.querySelector(BTN_SELECTOR);
         if (btn && btn.getAttribute('aria-expanded') === 'true') return true;
         return [...document.querySelectorAll('[role="menu"],[role="listbox"]')].some(visible);
     }
@@ -321,7 +351,7 @@
             new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         setTimeout(() => {
             if (!menuOpen()) return;
-            const btn = document.getElementById('gptModeSwitcher');
+            const btn = document.querySelector(BTN_SELECTOR);
             if (btn) btn.click();
         }, 200);
     }
@@ -368,7 +398,7 @@
 
     // 4) 轻量轮询兜底：按钮被整体重建（观察器挂在旧元素上）或漏网时仍能纠回
     setInterval(() => {
-        const btn = document.getElementById('gptModeSwitcher');
+        const btn = document.querySelector(BTN_SELECTOR);
         if (!btn) return;
         if (btn !== watchedBtn) watchButton(btn);
         if (!menuOpen() && !alreadySelected(btn)) scheduleCheck(0);
